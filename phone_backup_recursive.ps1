@@ -3,13 +3,13 @@
 
 $ErrorActionPreference = [string]"Stop"
 $DestDirForPhotos = [string]"C:\BACKUP\TELEFON_DCIM_ALL"
-$DestDirForCallRecordings = [string]"C:\BACKUP\TELEFON_CALL_RECORDINGS_ALL"
-$DestDirForVoiceRecordings = [string]"C:\BACKUP\TELEFON_VOICE_RECORDINGS_ALL"
-$DestDirForWhatsApp = [string]"C:\BACKUP\TELEFON_WHATSAPP_ALL"
-$DestDirForViber = [string]"C:\BACKUP\TELEFON_VIBER_ALL"
+# $DestDirForCallRecordings = [string]"C:\BACKUP\TELEFON_CALL_RECORDINGS_ALL"
+# $DestDirForVoiceRecordings = [string]"C:\BACKUP\TELEFON_VOICE_RECORDINGS_ALL"
+# $DestDirForWhatsApp = [string]"C:\BACKUP\TELEFON_WHATSAPP_ALL"
+# $DestDirForViber = [string]"C:\BACKUP\TELEFON_VIBER_ALL"
 $Summary = [Hashtable]@{NewFilesCount=0; ExistingFilesCount=0}
 
-function Create-Dir($path)
+function New-Dir($path)
 {
   if(! (Test-Path -Path $path))
   {
@@ -23,18 +23,19 @@ function Create-Dir($path)
 }
 
 
-function Get-SubFolder($parentDir, $subPath)
+function Get-SubFolder($params)
 {
-  $result = $parentDir
+  $result = $params[0]
+  $subPath = $params[1]
   foreach($pathSegment in ($subPath -split "\\"))
   {
-    $result = $result.GetFolder.Items() | Where-Object {$_.Name -eq $pathSegment} | select -First 1
-    if($result -eq $null)
+    $result = $result.GetFolder.Items() | Where-Object {$_.Name -eq $pathSegment} | Select-Object -First 1
+    if($null -eq $result)
     {
       throw "Not found $subPath folder"
     }
   }
-  return $result;
+  return $result
 }
 
 
@@ -42,14 +43,14 @@ function Get-PhoneMainDir($phoneName)
 {
   $o = New-Object -com Shell.Application
   $rootComputerDirectory = $o.NameSpace(0x11)
-  $phoneDirectory = $rootComputerDirectory.Items() | Where-Object {$_.Name -eq $phoneName} | select -First 1
+  $phoneDirectory = $rootComputerDirectory.Items() | Where-Object {$_.Name -eq $phoneName} | Select-Object -First 1
     
-  if($phoneDirectory -eq $null)
+  if($null -eq $phoneDirectory)
   {
     throw "Not found '$phoneName' folder in This computer. Connect your phone."
   }
   
-  return $phoneDirectory;
+  return $phoneDirectory
 }
 
 
@@ -57,7 +58,7 @@ function Get-FullPathOfMtpDir($mtpDir)
 {
  $fullDirPath = ""
  $directory = $mtpDir.GetFolder
- while($directory -ne $null)
+ while($null -ne $directory)
  {
    $fullDirPath =  -join($directory.Title, '\', $fullDirPath)
    $directory = $directory.ParentFolder;
@@ -69,8 +70,8 @@ function Get-FullPathOfMtpDir($mtpDir)
 
 function Copy-FromPhoneSource-ToBackup($sourceMtpDir, $destDirPath)
 {
- Create-Dir $destDirPath
- $destDirShell = (new-object -com Shell.Application).NameSpace($destDirPath)
+ New-Dir $destDirPath
+ $destDirShell = (New-Object -com Shell.Application).NameSpace($destDirPath)
  $fullSourceDirPath = Get-FullPathOfMtpDir $sourceMtpDir
 
  
@@ -106,15 +107,19 @@ function Copy-FromPhoneSource-ToBackup($sourceMtpDir, $destDirPath)
 }
 
 
-
-$phoneName = "MyPhoneName" #Phone name as it appears in This PC
+$emojiIcon = [System.Convert]::ToInt32("1f423", 16) #🐣
+$phoneName = [System.Char]::ConvertFromUtf32($emojiIcon)
 $phoneRootDir = Get-PhoneMainDir $phoneName
 
-Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\ACRCalls") $DestDirForCallRecordings
-Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\VoiceRecorder") $DestDirForVoiceRecordings
-Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\WhatsApp") $DestDirForWhatsApp
-Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\DCIM\Camera") $DestDirForPhotos
-Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\viber") $DestDirForViber
-Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Card\DCIM\Camera") $DestDirForPhotos
+$internalStorageName = [System.Char]::ConvertFromUtf32([System.Convert]::ToInt32("5185", 16)) + #内
+                        [System.Char]::ConvertFromUtf32([System.Convert]::ToInt32("90e8", 16)) + #部
+                        [System.Char]::ConvertFromUtf32([System.Convert]::ToInt32("5b58", 16)) + #存
+                        [System.Char]::ConvertFromUtf32([System.Convert]::ToInt32("50a8", 16)) #储
+# Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\ACRCalls") $DestDirForCallRecordings
+# Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\VoiceRecorder") $DestDirForVoiceRecordings
+# Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\WhatsApp") $DestDirForWhatsApp
+Copy-FromPhoneSource-ToBackup (Get-SubFolder ($phoneRootDir, ($internalStorageName + "\DCIM\Camera"))) $DestDirForPhotos
+# Copy-FromPhoneSource-ToBackup (Get-SubFolder $phoneRootDir "Phone\viber") $DestDirForViber
+Copy-FromPhoneSource-ToBackup (Get-SubFolder ($phoneRootDir, ($internalStorageName + "\Pictures\WeiXin"))) $DestDirForPhotos
 
 write-host ($Summary | out-string)
