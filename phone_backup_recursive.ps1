@@ -107,8 +107,9 @@ function Copy-FromPhoneSource-ToBackup($sourceMtpDir, $destDirPath)
 }
 
 
-$emojiIcon = [System.Convert]::ToInt32("1f423", 16) #🐣
-$phoneName = [System.Char]::ConvertFromUtf32($emojiIcon)
+# $emojiIcon = [System.Convert]::ToInt32("1f423", 16) #🐣
+# $phoneName = [System.Char]::ConvertFromUtf32($emojiIcon)
+$phoneName = "nnnn"
 $phoneRootDir = Get-PhoneMainDir $phoneName
 
 $internalStorageName = [System.Char]::ConvertFromUtf32([System.Convert]::ToInt32("5185", 16)) + #内
